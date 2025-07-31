@@ -279,36 +279,31 @@ app.post('/api/disconnect', async (req, res) => {
     });
   }
   
-  const extractedFirmId = sessionId.replace('firm_', '');
-  if (extractedFirmId !== firmId) {
-    return res.status(400).json({
-      success: false,
-      error: 'Session ID does not match firm ID'
-    });
-  }
+  // Use firmId directly (sessionId should be the same as firmId)
+  const actualFirmId = firmId;
   
-  console.log(`🔌 Disconnecting WhatsApp for firm: ${firmId}`);
+  console.log(`🔌 Disconnecting WhatsApp for firm: ${actualFirmId}`);
   
-  const client = clients.get(firmId);
+  const client = clients.get(actualFirmId);
   if (client) {
     try {
       await client.destroy();
-      console.log(`✅ Client destroyed for firm ${firmId}`);
+      console.log(`✅ Client destroyed for firm ${actualFirmId}`);
     } catch (error) {
-      console.error(`❌ Error destroying client for firm ${firmId}:`, error);
+      console.error(`❌ Error destroying client for firm ${actualFirmId}:`, error);
     }
   }
   
   // Clean up all data for this firm
-  clients.delete(firmId);
-  qrCodes.delete(firmId);
-  connectionStatuses.set(firmId, 'disconnected');
-  messageQueues.delete(firmId);
-  processingStates.delete(firmId);
+  clients.delete(actualFirmId);
+  qrCodes.delete(actualFirmId);
+  connectionStatuses.set(actualFirmId, 'disconnected');
+  messageQueues.delete(actualFirmId);
+  processingStates.delete(actualFirmId);
   
   res.json({
     success: true,
-    message: `WhatsApp disconnected for firm ${firmId}`
+    message: `WhatsApp disconnected for firm ${actualFirmId}`
   });
 });
 
