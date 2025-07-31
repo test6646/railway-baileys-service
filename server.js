@@ -8,7 +8,7 @@ const cron = require('node-cron');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Middleware
 app.use(helmet());
@@ -171,12 +171,14 @@ app.get('/health', (req, res) => {
 // Get connection status for specific session
 app.get('/api/status/:sessionId', (req, res) => {
   const sessionId = req.params.sessionId;
-  const firmId = sessionId.replace('firm_', ''); // Extract firm ID from session
+  const firmId = sessionId; // Use sessionId directly as firmId
   
-  const status = connectionStatuses.get(firmId) || 'disconnected';
+  const status = connectionStatuses.get(firmId) || 'not_found';
   const ready = status === 'ready' || status === 'connected';
   const qrAvailable = qrCodes.has(firmId);
   const queueLength = (messageQueues.get(firmId) || []).length;
+  
+  console.log(`📊 Status check for firm ${firmId}: ${status}, ready: ${ready}, qr: ${qrAvailable}`);
   
   res.json({
     status: status,
@@ -201,26 +203,21 @@ app.post('/api/connect', async (req, res) => {
     });
   }
   
-  const extractedFirmId = sessionId.replace('firm_', '');
-  if (extractedFirmId !== firmId) {
-    return res.status(400).json({
-      success: false,
-      error: 'Session ID does not match firm ID'
-    });
-  }
+  // Use firmId directly as the session identifier
+  const actualFirmId = firmId;
   
-  console.log(`🔗 Connecting WhatsApp for firm: ${firmId}`);
+  console.log(`🔗 Connecting WhatsApp for firm: ${actualFirmId}`);
   
   // Initialize client if not exists
-  if (!clients.has(firmId)) {
-    initializeClient(firmId);
+  if (!clients.has(actualFirmId)) {
+    initializeClient(actualFirmId);
   }
   
   res.json({
     success: true,
-    message: `WhatsApp connection initiated for firm ${firmId}`,
+    message: `WhatsApp connection initiated for firm ${actualFirmId}`,
     session_id: sessionId,
-    firm_id: firmId
+    firm_id: actualFirmId
   });
 });
 
@@ -235,28 +232,23 @@ app.post('/api/qr', async (req, res) => {
     });
   }
   
-  const extractedFirmId = sessionId.replace('firm_', '');
-  if (extractedFirmId !== firmId) {
-    return res.status(400).json({
-      success: false,
-      error: 'Session ID does not match firm ID'
-    });
-  }
+  // Use firmId directly as the session identifier
+  const actualFirmId = firmId;
   
-  console.log(`📱 Generating QR for firm: ${firmId}`);
+  console.log(`📱 Generating QR for firm: ${actualFirmId}`);
   
   // Initialize client if not exists
-  if (!clients.has(firmId)) {
-    initializeClient(firmId);
+  if (!clients.has(actualFirmId)) {
+    initializeClient(actualFirmId);
   }
   
   // Wait a bit for QR to be generated
   let attempts = 0;
   const checkQR = () => {
-    if (qrCodes.has(firmId)) {
+    if (qrCodes.has(actualFirmId)) {
       return res.json({
         success: true,
-        qr_code: qrCodes.get(firmId),
+        qr_code: qrCodes.get(actualFirmId),
         session_id: sessionId,
         message: 'Scan this QR code with WhatsApp'
       });
